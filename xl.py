@@ -2,6 +2,7 @@ import xlrd,xlwt
 import re
 import os
 import time
+from xlwt import Formula,Formatting
 
 class ExcelPlan(object):
 	"""docstring for ExcelRead"""
@@ -15,12 +16,12 @@ class ExcelPlan(object):
 					   数据请按以下规则录入
 					'''
 		self.time = time.ctime()
-		self.title = ['类','ERP编码','名称','模号','用量','单位','备注','盘点']
+		self.title = ['类','ERP编码','名称','模号','用量','单位','备注','盘点','=A1+A1','=2+2']
 		self.plan = ['计划生产','计划出货','库存']
 	
 	"""写入excel模板"""
 	def writeExcel(self):
-		f = xlwt.Workbook()
+		f = xlwt.Workbook(encoding='gbk')
 		sheet1 = f.add_sheet('Template',cell_overwrite_ok=True)
 		style1 = xlwt.XFStyle()
 		row = 0
@@ -30,9 +31,13 @@ class ExcelPlan(object):
 		sheet1.write(row,col,self.tips)
 		row +=2
 		sheet1.write(row,col,self.title)
+		i = 1
 		for t in self.title :
-			sheet1.write(row,col,t)
-			col +=1
+			if i <= 8 :
+				sheet1.write(row,col,t)
+				col +=1
+			else :
+				sheet1.write(row,col,Formula("A1*B1"))
 		if not os.path.exists(self.arg+'/Template.xls') :
 			f.save(self.arg+'/Template.xls')
 		else :
@@ -65,27 +70,27 @@ class ExcelPlan(object):
 		# 定义用量所在列
 		ccol = 4
 		# 写数据
-		for d in range(data) :
+		for d in data :
 			if d[0] =='总成' :
-				frow = row
+				fname = d[1]
 				for p in range(self.plan) :
-					for o in range(d) :
+					for o in d :
 						sheet1.write(row,col,o)
 						col += 1
 					sheet1.write(row,col,p)
 					row +=1
 				col = 0
 			else :
-				for p in range(self.plan) :
-					for o in range(d) :
+				for p in self.plan :
+					for o in d :
 						sheet1.write(row,col,o)
 						col += 1
 					sheet1.write(row,col,p)
 					col += 1
-				for i in range(31) :
-					fc = '=ADDRESS(frow,)'
-					sheet1.write_formula(row,col,'')
-					col += 1
+					if p == '计划出货' :
+						for i in range(31) :
+							sheet1.write_formula(row,col,'=vlookup(%s,b:aaa,%s,0)*ADDRESS(%s,6)'%fname%col%row)
+							col += 1
 				col = 0
 
 		f.save(self.arg+'/PlanExcel.xls')
@@ -108,7 +113,6 @@ class ExcelPlan(object):
 					print('将%s写入data'%li[1])
 					data.append(old)
 					old = []
-				print('diyiczc')
 				j +=1
 			if li[1] != '' and li[1] != 'ERP编码' :
 				old.append(li)
